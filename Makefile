@@ -1,17 +1,8 @@
-
 # Name: Makefile
-# Author: <insert your name here>
-# Copyright: <insert your copyright message here>
-# License: <insert your license reference here>
+# Author: Julio Contreras
+# License: Free (?)
+# Based on: https://gist.github.com/burakerdem/a54422d11fd3b987897a
 
-# DEVICE ....... The AVR device you compile for
-# CLOCK ........ Target AVR clock rate in Hertz
-# OBJECTS ...... The object files created from your source files. This list is
-#                usually the same as the list of source files with suffix ".o".
-# PROGRAMMER ... Options to avrdude which define the hardware you use for
-#                uploading to the AVR and the interface where this hardware
-#                is connected.
-# FUSES ........ Parameters for avrdude to flash the fuses appropriately.
 
 DEVICE     = attiny85
 CLOCK      = 8000000

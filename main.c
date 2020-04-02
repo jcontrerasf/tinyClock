@@ -4,7 +4,7 @@
 * Author: Julio Contreras - https://github.com/jcontrerasf
 * Creation date: March 2020 - Quarantine
 * Description: Clock that uses just 8 leds to display the time. Uses main power frequency for timekeeping.
-* The first 4 leds represent the hour in binary, the next 3 represent minute tens and the last adds 5 minutes.
+* The first 4 leds represent the hour in binary, the next 3 represent minute tens (also en binary) and the last adds 5 minutes.
 * Example: 09:35	=	⬛⬜⬜⬛ ⬜⬛⬛ ⬛ 	  =   1*2^3 + 0*2^2 + 0*2^1 + 1*2^0 : 0*2^2 + 1*2^1 + 1*2^0 + 1*5
 * Example: 02:10	=	⬜⬜⬛⬜ ⬜⬜⬛ ⬜ 	  =   0*2^3 + 0*2^2 + 1*2^1 + 0*2^0 : 0*2^2 + 0*2^1 + 1*2^0 + 0*5
 * Useful links:
@@ -18,26 +18,28 @@
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
 
-#define MAINS_FREQ 	50
-#define CLOCK_PIN   0
+#define MAINS_FREQ  50
+#define CLOCK_PIN   4
 #define DATA_PIN    1
 #define LATCH_PIN   3
+#define OUT_CMP     240
 
 
 volatile uint8_t counter = 0;
 
-//Function prototypes
+//  Function prototypes
 static void init(void);
+static void init_timer(void);
 static void shift(uint8_t);
 static uint8_t five(void);
 
 typedef struct{
-	unsigned char seconds;
-	unsigned char minutes;
 	unsigned char hours;
+	unsigned char minutes;
+	unsigned char seconds;
 	}time;
 	
-	time t = {0,0,9};
+	time t = {2,40,0}; //  Set time
 
 ISR(INT0_vect) // PB2
 {
@@ -46,7 +48,7 @@ ISR(INT0_vect) // PB2
   {
   	counter = 0;
   	t.seconds++;
-  	//PORTB ^= 1<<PORTB1; 
+  	//PORTB ^= 1<<PORTB1; // Toggles pin PB1 each second
   	if(t.seconds == 60)
   	{
   		t.seconds = 0;
@@ -60,7 +62,7 @@ ISR(INT0_vect) // PB2
   				t.hours = 1;
   			}
   		}
-  		//PORTB = t.minutes/15;
+  		//PORTB = t.minutes/15; // Shows quarter in binary at PB0 and PB1
   	}
   }
   shift(t.hours<<4|(t.minutes/10)<<1|five());
@@ -68,13 +70,23 @@ ISR(INT0_vect) // PB2
 
 void init(void)
 {
-  MCUCR |= (1<<ISC01 | 1<<ISC00);		// The rising edge of INT0 generates an interrupt request
-  GIMSK |= 1<<INT0;                 // Activate the INT0
-  DDRB 	|= (1<<DDB0 | 1<<DDB1 | 1<<DDB3); 		// Set pins 0, 1 and 3 of port B as outputs
-  sei();								            //Set the Global Interrupt Enable Bit
-  //set_sleep_mode(SLEEP_MODE_PWR_SAVE);	//Selecting power save mode as the sleep mode to be used
-  //sleep_enable();						//Enabling sleep mode
+  MCUCR |= (1<<ISC01 | 1<<ISC00);		        // The rising edge of INT0 generates an interrupt request
+  GIMSK |= 1<<INT0;                         // Activate the INT0
+  DDRB 	|= (1<<DDB1 | 1<<DDB3 | 1<<DDB4); 	// Set pins 1, 3 and 4 of port B as outputs
+  sei();								                    // Set the Global Interrupt Enable Bit
+  set_sleep_mode(SLEEP_MODE_PWR_SAVE);	    // Selecting power save mode as the sleep mode to be used
+  sleep_enable();						                // Enabling sleep mode
 }
+
+void init_timer(void)
+{
+  DDRB   |= 1<<DDB0;               // Set pin 0 as output
+  TCCR0B |= 1<<CS00;               // No prescaling and Waveform Generation Mode
+  TCCR0A |= 1<<COM0A1;             // Non-inverting PWM
+  TCCR0A |= (1<<WGM01 | 1<<WGM00); // Fast PWM
+  OCR0A   = OUT_CMP;               // Set the comparation value (0 to 255)
+}
+
 
 void shift(uint8_t send_byte)
 {
@@ -99,6 +111,7 @@ void shift(uint8_t send_byte)
   PORTB &= ~(1<<LATCH_PIN);
 }
 
+
 uint8_t five(void)
 {
   if(t.minutes%10 < 5)
@@ -113,11 +126,12 @@ uint8_t five(void)
 
 int main()
 {
-  init();			// Initialize registers and configurations
+  init_timer(); // Initialize timer for PWM generation
+  init();			  // Initialize registers and configurations
 
   while(1)
   {
-  	//sleep_mode();	//Enter sleep mode
+  	sleep_mode();	// Enter sleep mode
   }
 
   return 0;

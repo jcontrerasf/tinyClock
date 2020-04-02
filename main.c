@@ -18,14 +18,12 @@
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
 
-#define MAINS_FREQ  50
-#define CLOCK_PIN   4
-#define DATA_PIN    1
-#define LATCH_PIN   3
-#define OUT_CMP     240
-
-
-volatile uint8_t counter = 0;
+#define MAINS_FREQ  50    // Mains or line frequency
+#define CLOCK_PIN   4     // Pin to connect to 74HC595 clock pin 
+#define DATA_PIN    1     // Pin to connect to 74HC595 data pin
+#define LATCH_PIN   3     // Pin to connect to 74HC595 latch pin
+#define OUT_CMP     20    // Value that uses the timer to create the PWM (0 to 255)
+                          // Due to inverting PWM mode is set, lower value means lower brightness
 
 //  Function prototypes
 static void init(void);
@@ -33,15 +31,18 @@ static void init_timer(void);
 static void shift(uint8_t);
 static uint8_t five(void);
 
+volatile uint8_t counter = 0;
+
 typedef struct{
 	unsigned char hours;
 	unsigned char minutes;
 	unsigned char seconds;
 	}time;
 	
-	time t = {2,40,0}; //  Set time
+	time t = {12,0,0}; //  Set time
 
-ISR(INT0_vect) // PB2
+// Interrupt Service Routine
+ISR(INT0_vect) // INT0 is PB2
 {
   counter++;
   if(counter == MAINS_FREQ)
@@ -65,7 +66,7 @@ ISR(INT0_vect) // PB2
   		//PORTB = t.minutes/15; // Shows quarter in binary at PB0 and PB1
   	}
   }
-  shift(t.hours<<4|(t.minutes/10)<<1|five());
+  shift(t.hours<<4|(t.minutes/10)<<1|five()); // Calculates and send the byte to show in the 8 LEDs
 }
 
 void init(void)
@@ -80,14 +81,14 @@ void init(void)
 
 void init_timer(void)
 {
-  DDRB   |= 1<<DDB0;               // Set pin 0 as output
-  TCCR0B |= 1<<CS00;               // No prescaling and Waveform Generation Mode
-  TCCR0A |= 1<<COM0A1;             // Non-inverting PWM
-  TCCR0A |= (1<<WGM01 | 1<<WGM00); // Fast PWM
-  OCR0A   = OUT_CMP;               // Set the comparation value (0 to 255)
+  DDRB   |= 1<<DDB0;                  // Set pin 0 as output
+  TCCR0B |= 1<<CS00;                  // No prescaling and Waveform Generation Mode
+  TCCR0A |= (1<<COM0A0 | 1<<COM0A1);  // Inverting PWM mode
+  TCCR0A |= (1<<WGM01 | 1<<WGM00);    // Fast PWM
+  OCR0A   = OUT_CMP;                  // Set the comparation value (0 to 255)
 }
 
-
+// Function that sends a byte to 74HC595
 void shift(uint8_t send_byte)
 {
   uint8_t send_bit;
@@ -95,20 +96,20 @@ void shift(uint8_t send_byte)
 
   for(i = 0; i < 8; i++)
   {
-    PORTB &= ~(1<<CLOCK_PIN);
-    send_bit = !!(send_byte & (1<<i));
+    PORTB &= ~(1<<CLOCK_PIN);           // Clock pin low
+    send_bit = !!(send_byte & (1<<i));  // Prepare bit to send
     if(send_bit)
     {
-      PORTB |= 1<<DATA_PIN;
+      PORTB |= 1<<DATA_PIN;             // If send bit is 1 then set data pin as 1
     }
     else
     {
-      PORTB &= ~(1<<DATA_PIN);
+      PORTB &= ~(1<<DATA_PIN);          // Else set as 0
     }
-    PORTB |= 1<<CLOCK_PIN;
+    PORTB |= 1<<CLOCK_PIN;              // Clock pin high
   }
-  PORTB |= 1<<LATCH_PIN;
-  PORTB &= ~(1<<LATCH_PIN);
+  PORTB |= 1<<LATCH_PIN;                // Pulse to set the
+  PORTB &= ~(1<<LATCH_PIN);             // output latch (see 74HC595 datasheet)
 }
 
 
@@ -116,11 +117,11 @@ uint8_t five(void)
 {
   if(t.minutes%10 < 5)
   {
-    return 0;
+    return 0;          // If minute units are lower than five return 0
   }
   else
   {
-    return 1;
+    return 1;          // If minute units are higher return 1
   }
 }
 

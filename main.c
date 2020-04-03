@@ -71,12 +71,12 @@ ISR(INT0_vect) // INT0 is PB2
 
 void init(void)
 {
-  MCUCR |= (1<<ISC01 | 1<<ISC00);		        // The rising edge of INT0 generates an interrupt request
-  GIMSK |= 1<<INT0;                         // Activate the INT0
+  MCUCR |= (1<<ISC01 | 1<<ISC00);		// The rising edge of INT0 generates an interrupt request
+  GIMSK |= 1<<INT0;				// Activate the INT0
   DDRB 	|= (1<<DDB1 | 1<<DDB3 | 1<<DDB4); 	// Set pins 1, 3 and 4 of port B as outputs
-  sei();								                    // Set the Global Interrupt Enable Bit
-  set_sleep_mode(SLEEP_MODE_PWR_SAVE);	    // Selecting power save mode as the sleep mode to be used
-  sleep_enable();						                // Enabling sleep mode
+  sei();					// Set the Global Interrupt Enable Bit
+  set_sleep_mode(SLEEP_MODE_PWR_SAVE);	    	// Selecting power save mode as the sleep mode to be used
+  sleep_enable();		                // Enabling sleep mode
 }
 
 void init_timer(void)
@@ -127,8 +127,8 @@ uint8_t five(void)
 
 int main()
 {
-  init_timer(); // Initialize timer for PWM generation
-  init();			  // Initialize registers and configurations
+  init_timer();	  // Initialize timer for PWM generation
+  init();	  // Initialize registers and configurations
 
   while(1)
   {

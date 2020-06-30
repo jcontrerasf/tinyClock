@@ -63,10 +63,9 @@ ISR(INT0_vect) // INT0 is PB2
   				t.hours = 1;
   			}
   		}
-  		//PORTB = t.minutes/15; // Shows quarter in binary at PB0 and PB1
+  		shift(t.hours<<4|(t.minutes/10)<<1|five()); // Calculates and send the byte to show in the 8 LEDs
   	}
   }
-  shift(t.hours<<4|(t.minutes/10)<<1|five()); // Calculates and send the byte to show in the 8 LEDs
 }
 
 void init(void)
@@ -129,6 +128,7 @@ int main()
 {
   init_timer();	  // Initialize timer for PWM generation
   init();	  // Initialize registers and configurations
+  shift(t.hours<<4|(t.minutes/10)<<1|five()); // Initial display
 
   while(1)
   {
